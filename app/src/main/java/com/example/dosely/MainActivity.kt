@@ -29,11 +29,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.dosely.ui.BottomNavItem
-import com.example.dosely.ui.DashboardScreen
-import com.example.dosely.ui.HistoryScreen
-import com.example.dosely.ui.MedicationsScreen
-import com.example.dosely.ui.RemindersScreen
-import com.example.dosely.ui.SettingsScreen
+import com.example.dosely.ui.screens.DashboardScreen
+import com.example.dosely.ui.screens.MedicationsScreen
+import com.example.dosely.ui.screens.RemindersScreen
+import com.example.dosely.ui.screens.HistoryScreen
+import com.example.dosely.ui.screens.SettingsScreen
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
