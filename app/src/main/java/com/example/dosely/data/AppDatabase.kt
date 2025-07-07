@@ -8,24 +8,10 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-
-@Entity
-data class ExampleEntity(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val value: String
-)
-
-@Dao
-interface ExampleDao {
-    @Query("SELECT * FROM ExampleEntity")
-    suspend fun getAll(): List<ExampleEntity>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(entity: ExampleEntity)
-}
+import com.example.dosely.data.MedicationDao
+import com.example.dosely.data.MedicationEntity
 
 @Database(entities = [MedicationEntity::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun medicationDao(): MedicationDao
-    abstract fun exampleDao(): ExampleDao
 } 
