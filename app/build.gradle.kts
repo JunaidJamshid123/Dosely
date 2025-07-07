@@ -63,4 +63,5 @@ dependencies {
     kapt(libs.room.compiler)
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.gson)
+    implementation("androidx.compose.material:material-icons-extended:1.6.1")
 }

@@ -2,10 +2,14 @@ package com.example.dosely.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -51,26 +55,56 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                 )
             )
             .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Header Section
+        // Header Section with Profile
         item {
-            Column(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = "Hello, $userName! 👋",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = darkBlue
-                )
-                Text(
-                    text = formattedDate,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = mediumBlue,
-                    fontSize = 16.sp
-                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = "Hello, $userName! 👋",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = darkBlue
+                    )
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = mediumBlue,
+                        fontSize = 16.sp
+                    )
+                }
+
+                // Profile Icon
+                Card(
+                    modifier = Modifier.size(50.dp),
+                    shape = CircleShape,
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .border(2.dp, accentBlue.copy(alpha = 0.3f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "Profile",
+                            tint = accentBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
             }
         }
 
@@ -82,7 +116,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                     containerColor = Color.White
                 ),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
@@ -99,27 +133,39 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                             fontWeight = FontWeight.SemiBold,
                             color = darkBlue
                         )
-                        Text(
-                            text = "$taken/$total",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = accentBlue
-                        )
+                        Surface(
+                            color = accentBlue.copy(alpha = 0.1f),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Text(
+                                text = "$taken/$total",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = accentBlue,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
                     }
 
                     LinearProgressIndicator(
                         progress = progress,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(5.dp)),
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp)),
                         color = accentBlue,
-                        trackColor = mediumBlue.copy(alpha = 0.3f)
+                        trackColor = mediumBlue.copy(alpha = 0.2f)
                     )
 
                     val remaining = total - taken
+                    val progressText = if (remaining > 0) {
+                        "$remaining doses remaining"
+                    } else {
+                        "All doses completed! 🎉"
+                    }
+
                     Text(
-                        text = if (remaining > 0) "$remaining doses remaining" else "All doses completed! 🎉",
+                        text = progressText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = mediumBlue,
                         fontWeight = FontWeight.Medium
@@ -135,8 +181,8 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
                 ),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                shape = RoundedCornerShape(12.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -145,12 +191,26 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.fire),
-                        contentDescription = "Streak",
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column {
+                    Surface(
+                        color = Color(0xFFFFF3E0),
+                        shape = CircleShape,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.fire),
+                                contentDescription = "Streak",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
                             text = "3 Day Streak!",
                             style = MaterialTheme.typography.titleMedium,
@@ -160,7 +220,8 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                         Text(
                             text = "Keep up the great work",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = mediumBlue
+                            color = mediumBlue,
+                            fontSize = 13.sp
                         )
                     }
                 }
@@ -174,7 +235,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = darkBlue,
-                modifier = Modifier.padding(vertical = 8.dp)
+                modifier = Modifier.padding(top = 8.dp)
             )
         }
 
@@ -186,7 +247,7 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                     containerColor = Color.White
                 ),
                 shape = RoundedCornerShape(12.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
                 Row(
                     modifier = Modifier
@@ -195,17 +256,28 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Pill Icon (always shown)
-                    Image(
-                        painter = painterResource(id = R.drawable.pill),
-                        contentDescription = "Pill",
-                        modifier = Modifier.size(24.dp)
-                    )
+                    // Pill Icon with background
+                    Surface(
+                        color = lightBlue.copy(alpha = 0.5f),
+                        shape = CircleShape,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.pill),
+                                contentDescription = "Pill",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
 
                     // Medication Info
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
                             text = med.name,
@@ -228,18 +300,18 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                             Color(0xFFE8F5E8)
                         else
                             Color(0xFFFFF3E0),
-                        shape = RoundedCornerShape(16.dp),
+                        shape = RoundedCornerShape(20.dp),
                         modifier = Modifier.padding(2.dp)
                     ) {
                         Text(
                             text = med.status,
                             style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.SemiBold,
                             color = if (med.status == "Taken")
                                 Color(0xFF2E7D32)
                             else
                                 Color(0xFFE65100),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             fontSize = 11.sp
                         )
                     }
@@ -255,11 +327,11 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                     containerColor = Color.White
                 ),
                 shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
                         text = "Today's Summary",
@@ -275,18 +347,30 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                         // Total
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(
-                                text = "$total",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = darkBlue
-                            )
+                            Surface(
+                                color = darkBlue.copy(alpha = 0.1f),
+                                shape = CircleShape,
+                                modifier = Modifier.size(50.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "$total",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = darkBlue
+                                    )
+                                }
+                            }
                             Text(
                                 text = "Total",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = mediumBlue,
+                                fontWeight = FontWeight.Medium,
                                 fontSize = 12.sp
                             )
                         }
@@ -294,18 +378,30 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                         // Taken
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(
-                                text = "$taken",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = accentBlue
-                            )
+                            Surface(
+                                color = accentBlue.copy(alpha = 0.1f),
+                                shape = CircleShape,
+                                modifier = Modifier.size(50.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "$taken",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = accentBlue
+                                    )
+                                }
+                            }
                             Text(
                                 text = "Taken",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = mediumBlue,
+                                fontWeight = FontWeight.Medium,
                                 fontSize = 12.sp
                             )
                         }
@@ -313,18 +409,30 @@ fun DashboardScreen(viewModel: DashboardViewModel = DashboardViewModel()) {
                         // Remaining
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Text(
-                                text = "${total - taken}",
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFE57373)
-                            )
+                            Surface(
+                                color = Color(0xFFE57373).copy(alpha = 0.1f),
+                                shape = CircleShape,
+                                modifier = Modifier.size(50.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${total - taken}",
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFE57373)
+                                    )
+                                }
+                            }
                             Text(
                                 text = "Remaining",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = mediumBlue,
+                                fontWeight = FontWeight.Medium,
                                 fontSize = 12.sp
                             )
                         }

@@ -24,7 +24,8 @@ interface ExampleDao {
     suspend fun insert(entity: ExampleEntity)
 }
 
-@Database(entities = [ExampleEntity::class], version = 1)
+@Database(entities = [MedicationEntity::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
+    abstract fun medicationDao(): MedicationDao
     abstract fun exampleDao(): ExampleDao
 } 

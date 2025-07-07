@@ -27,4 +27,4 @@ class DashboardViewModel : ViewModel() {
     // Progress: doses taken vs total
     val totalDoses: Int get() = _medications.value.size
     val takenDoses: Int get() = _medications.value.count { it.status == "Taken" }
-} 
+}
