@@ -56,6 +56,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.runtime.remember
 
 class MedicationsViewModelFactory(private val repository: com.example.dosely.data.MedicationRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -103,7 +104,7 @@ fun MedicationsScreen() {
             "dosely-db"
         ).build()
     }
-    val repository = remember { MedicationRepositoryImpl(db.medicationDao()) }
+    val repository = remember { MedicationRepositoryImpl(db.medicationDao(), db.doseStatusDao()) }
     val factory = remember { MedicationsViewModelFactory(repository) }
     val viewModel: MedicationsViewModel = viewModel(
         viewModelStoreOwner = owner,
@@ -203,72 +204,122 @@ fun MedicationsScreen() {
             
             if (filteredMedications.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
+                    modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.MedicalServices,
-                            contentDescription = null,
-                            tint = mediumBlue,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Text(
-                            "No medications found",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = darkBlue,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            "Add your first medication to get started",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = mediumBlue,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    Text(
+                        "No medications found.",
+                        color = mediumBlue,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
                 }
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    items(filteredMedications) { medication ->
-                        EnhancedMedicationCard(
-                            medication = medication,
-                            onEdit = {
-                                editMedication = medication
-                                showEditDialog = true
-                            },
-                            onDelete = {
-                                coroutineScope.launch {
-                                    recentlyDeleted = medication
-                                    viewModel.deleteMedication(medication)
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = "Medication deleted",
-                                        actionLabel = "Undo"
-                                    )
-                                    if (result == SnackbarResult.ActionPerformed && recentlyDeleted != null) {
-                                        viewModel.addMedication(recentlyDeleted!!)
-                                        recentlyDeleted = null
+                    items(filteredMedications) { med ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp)),
+                            colors = CardDefaults.cardColors(containerColor = Color.White),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Icon
+                                Surface(
+                                    color = lightBlue.copy(alpha = 0.6f),
+                                    shape = CircleShape,
+                                    modifier = Modifier.size(44.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                                        Icon(
+                                            imageVector = when (med.medicationType) {
+                                                "Tablet" -> Icons.Filled.MedicalServices
+                                                "Capsule" -> Icons.Filled.MedicalServices
+                                                "Liquid" -> Icons.Filled.LocalDrink
+                                                "Injection" -> Icons.Filled.Vaccines
+                                                "Cream" -> Icons.Filled.Healing
+                                                "Drops" -> Icons.Filled.Opacity
+                                                else -> Icons.Filled.MedicalServices
+                                            },
+                                            contentDescription = null,
+                                            tint = accentBlue,
+                                            modifier = Modifier.size(24.dp)
+                                        )
                                     }
                                 }
-                            },
-                            lightBlue = lightBlue,
-                            mediumBlue = mediumBlue,
-                            darkBlue = darkBlue,
-                            accentBlue = accentBlue
-                        )
-                    }
-                    
-                    // Bottom padding for FAB
-                    item {
-                        Spacer(modifier = Modifier.height(80.dp))
+                                Spacer(Modifier.width(14.dp))
+                                // Medication Info
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(
+                                        med.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = darkBlue,
+                                        maxLines = 1
+                                    )
+                                    Text(
+                                        med.dosage,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = mediumBlue,
+                                        maxLines = 1
+                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Filled.Alarm, contentDescription = null, tint = accentBlue, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            med.times,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = accentBlue,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    if (med.notes.isNotBlank()) {
+                                        Text(
+                                            med.notes,
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = mediumBlue,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
+                                // Actions
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    IconButton(onClick = { editMedication = med; showEditDialog = true }) {
+                                        Icon(Icons.Filled.Edit, contentDescription = "Edit", tint = darkBlue)
+                                    }
+                                    IconButton(onClick = {
+                                        recentlyDeleted = med
+                                        viewModel.deleteMedication(med)
+                                        coroutineScope.launch {
+                                            val result = snackbarHostState.showSnackbar(
+                                                message = "Medication deleted",
+                                                actionLabel = "Undo"
+                                            )
+                                            if (result == SnackbarResult.ActionPerformed && recentlyDeleted != null) {
+                                                viewModel.addMedication(recentlyDeleted!!)
+                                                recentlyDeleted = null
+                                            }
+                                        }
+                                    }) {
+                                        Icon(Icons.Filled.Delete, contentDescription = "Delete", tint = Color(0xFFE57373))
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -550,6 +601,12 @@ fun EnhancedMedicationDialog(
     )
     val timeFormatter = remember { DateTimeFormatter.ofPattern("h:mm a") }
     val scrollState = rememberScrollState()
+    // Error states
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var dosageError by remember { mutableStateOf<String?>(null) }
+    var frequencyError by remember { mutableStateOf<String?>(null) }
+    var durationError by remember { mutableStateOf<String?>(null) }
+    var timesError by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -569,15 +626,25 @@ fun EnhancedMedicationDialog(
             ) {
                 OutlinedTextField(
                     value = name,
-                    onValueChange = { name = it },
+                    onValueChange = {
+                        name = it
+                        if (it.isNotBlank()) nameError = null
+                    },
                     label = { Text("Medicine Name") },
-                    singleLine = true
+                    singleLine = true,
+                    isError = nameError != null,
+                    supportingText = { if (nameError != null) Text(nameError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
                 )
                 OutlinedTextField(
                     value = dosage,
-                    onValueChange = { dosage = it },
+                    onValueChange = {
+                        dosage = it
+                        if (it.isNotBlank()) dosageError = null
+                    },
                     label = { Text("Dosage (e.g., 500mg)") },
-                    singleLine = true
+                    singleLine = true,
+                    isError = dosageError != null,
+                    supportingText = { if (dosageError != null) Text(dosageError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
                 )
                 OutlinedTextField(
                     value = description,
@@ -587,15 +654,29 @@ fun EnhancedMedicationDialog(
                 )
                 OutlinedTextField(
                     value = frequency,
-                    onValueChange = { if (it.all { c -> c.isDigit() }) frequency = it },
+                    onValueChange = {
+                        if (it.all { c -> c.isDigit() }) {
+                            frequency = it
+                            frequencyError = null
+                        } else frequencyError = "Must be a number"
+                    },
                     label = { Text("Times per day") },
-                    singleLine = true
+                    singleLine = true,
+                    isError = frequencyError != null,
+                    supportingText = { if (frequencyError != null) Text(frequencyError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
                 )
                 OutlinedTextField(
                     value = duration,
-                    onValueChange = { if (it.all { c -> c.isDigit() }) duration = it },
+                    onValueChange = {
+                        if (it.all { c -> c.isDigit() }) {
+                            duration = it
+                            durationError = null
+                        } else durationError = "Must be a number"
+                    },
                     label = { Text("Days") },
-                    singleLine = true
+                    singleLine = true,
+                    isError = durationError != null,
+                    supportingText = { if (durationError != null) Text(durationError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp) }
                 )
                 OutlinedTextField(
                     value = notes,
@@ -606,28 +687,30 @@ fun EnhancedMedicationDialog(
                 // Medication type selector
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
                     Text("Type:", modifier = Modifier.padding(end = 8.dp))
-                    listOf("Tablet", "Capsule", "Liquid", "Injection", "Cream", "Drops").forEach { type ->
-                        FilterChip(
-                            onClick = { medicationType = type },
-                            label = { Text(type) },
-                            selected = medicationType == type,
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = when (type) {
-                                        "Tablet" -> Icons.Filled.MedicalServices
-                                        "Capsule" -> Icons.Filled.MedicalServices
-                                        "Liquid" -> Icons.Filled.LocalDrink
-                                        "Injection" -> Icons.Filled.Vaccines
-                                        "Cream" -> Icons.Filled.Healing
-                                        "Drops" -> Icons.Filled.Opacity
-                                        else -> Icons.Filled.MedicalServices
-                                    },
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            },
-                            modifier = Modifier.padding(end = 4.dp)
-                        )
+                    LazyRow {
+                        items(listOf("Tablet", "Capsule", "Liquid", "Injection", "Cream", "Drops")) { type ->
+                            FilterChip(
+                                onClick = { medicationType = type },
+                                label = { Text(type) },
+                                selected = medicationType == type,
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = when (type) {
+                                            "Tablet" -> Icons.Filled.MedicalServices
+                                            "Capsule" -> Icons.Filled.MedicalServices
+                                            "Liquid" -> Icons.Filled.LocalDrink
+                                            "Injection" -> Icons.Filled.Vaccines
+                                            "Cream" -> Icons.Filled.Healing
+                                            "Drops" -> Icons.Filled.Opacity
+                                            else -> Icons.Filled.MedicalServices
+                                        },
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                },
+                                modifier = Modifier.padding(end = 4.dp)
+                            )
+                        }
                     }
                 }
                 // Time picker section
@@ -639,8 +722,9 @@ fun EnhancedMedicationDialog(
                         Text("Add Time")
                     }
                     Spacer(Modifier.width(8.dp))
-                    Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                        timesList.forEachIndexed { idx, time ->
+                    LazyRow(modifier = Modifier.weight(1f)) {
+                        items(timesList.size) { idx ->
+                            val time = timesList[idx]
                             AssistChip(
                                 onClick = {},
                                 label = { Text(time) },
@@ -675,6 +759,7 @@ fun EnhancedMedicationDialog(
                                 val formatted = picked.format(timeFormatter)
                                 if (formatted !in timesList) {
                                     timesList = timesList.toMutableList().apply { add(formatted) }
+                                    timesError = null
                                 }
                                 showTimePicker = false
                             }) { Text("Add") }
@@ -684,30 +769,53 @@ fun EnhancedMedicationDialog(
                         }
                     )
                 }
+                if (timesError != null) {
+                    Text(timesError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val freqInt = frequency.toIntOrNull() ?: 1
-                    val durInt = duration.toIntOrNull() ?: 1
-                    if (name.isNotBlank() && dosage.isNotBlank() && freqInt > 0 && durInt > 0) {
-                        onConfirm(
-                            MedicationEntity(
-                                id = initial?.id ?: 0,
-                                name = name,
-                                dosage = dosage,
-                                description = description,
-                                frequency = freqInt,
-                                times = timesList.joinToString(","),
-                                duration = durInt,
-                                notes = notes,
-                                medicationType = medicationType
-                            )
-                        )
+                    var hasError = false
+                    if (name.isBlank()) {
+                        nameError = "Name is required"
+                        hasError = true
                     }
+                    if (dosage.isBlank()) {
+                        dosageError = "Dosage is required"
+                        hasError = true
+                    }
+                    val freqInt = frequency.toIntOrNull()
+                    if (freqInt == null || freqInt <= 0) {
+                        frequencyError = "Enter a valid number > 0"
+                        hasError = true
+                    }
+                    val durInt = duration.toIntOrNull()
+                    if (durInt == null || durInt <= 0) {
+                        durationError = "Enter a valid number > 0"
+                        hasError = true
+                    }
+                    if (timesList.isEmpty()) {
+                        timesError = "Add at least one time"
+                        hasError = true
+                    }
+                    if (hasError) return@Button
+                    onConfirm(
+                        MedicationEntity(
+                            id = initial?.id ?: 0,
+                            name = name,
+                            dosage = dosage,
+                            description = description,
+                            frequency = freqInt!!,
+                            times = timesList.joinToString(","),
+                            duration = durInt!!,
+                            notes = notes,
+                            medicationType = medicationType
+                        )
+                    )
                 },
-                enabled = name.isNotBlank() && dosage.isNotBlank() && (frequency.toIntOrNull() ?: 0) > 0 && (duration.toIntOrNull() ?: 0) > 0
+                enabled = true
             ) { Text(if (initial == null) "Add" else "Update") }
         },
         dismissButton = {

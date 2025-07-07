@@ -10,8 +10,11 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.example.dosely.data.MedicationDao
 import com.example.dosely.data.MedicationEntity
+import com.example.dosely.data.DoseStatusEntity
+import com.example.dosely.data.DoseStatusDao
 
-@Database(entities = [MedicationEntity::class], version = 1, exportSchema = false)
+@Database(entities = [MedicationEntity::class, DoseStatusEntity::class], version = 2)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun medicationDao(): MedicationDao
+    abstract fun doseStatusDao(): DoseStatusDao
 } 
