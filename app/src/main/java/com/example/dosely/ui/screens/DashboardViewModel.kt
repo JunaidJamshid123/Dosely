@@ -61,8 +61,13 @@ class DashboardViewModel(
             }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val totalDoses: Int get() = medications.value.size
-    val takenDoses: Int get() = medications.value.count { it.status == "Taken" }
+    val takenDosesFlow: StateFlow<Int> = medications
+        .map { meds -> meds.count { it.status == "Taken" } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    val totalDosesFlow: StateFlow<Int> = medications
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 
     fun markDose(medicationId: Int, time: String, isTaken: Boolean) {
         viewModelScope.launch {

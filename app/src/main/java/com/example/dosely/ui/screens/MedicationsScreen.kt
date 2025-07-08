@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.runtime.remember
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.dosely.ui.screens.MedicationEntityDetailsDialog
 
 class MedicationsViewModelFactory(private val repository: com.example.dosely.data.MedicationRepository) : ViewModelProvider.Factory {
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -119,6 +121,8 @@ fun MedicationsScreen() {
     var showEditDialog by remember { mutableStateOf(false) }
     var editMedication by remember { mutableStateOf<MedicationEntity?>(null) }
     var recentlyDeleted by remember { mutableStateOf<MedicationEntity?>(null) }
+    var selectedMedication by remember { mutableStateOf<MedicationEntity?>(null) }
+    var showDetailsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         floatingActionButton = {
@@ -225,7 +229,11 @@ fun MedicationsScreen() {
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(18.dp)),
+                                .clip(RoundedCornerShape(18.dp))
+                                .clickable {
+                                    selectedMedication = med
+                                    showDetailsDialog = true
+                                },
                             colors = CardDefaults.cardColors(containerColor = Color.White),
                             elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                         ) {
@@ -269,13 +277,15 @@ fun MedicationsScreen() {
                                         style = MaterialTheme.typography.titleMedium,
                                         fontWeight = FontWeight.Bold,
                                         color = darkBlue,
-                                        maxLines = 1
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Text(
                                         med.dosage,
                                         style = MaterialTheme.typography.bodySmall,
                                         color = mediumBlue,
-                                        maxLines = 1
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Icon(Icons.Filled.Alarm, contentDescription = null, tint = accentBlue, modifier = Modifier.size(16.dp))
@@ -284,7 +294,8 @@ fun MedicationsScreen() {
                                             med.times,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = accentBlue,
-                                            maxLines = 1
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                     if (med.notes.isNotBlank()) {
@@ -292,7 +303,8 @@ fun MedicationsScreen() {
                                             med.notes,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = mediumBlue,
-                                            maxLines = 1
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                     }
                                 }
@@ -358,6 +370,13 @@ fun MedicationsScreen() {
             mediumBlue = mediumBlue,
             darkBlue = darkBlue,
             accentBlue = accentBlue
+        )
+    }
+
+    if (showDetailsDialog && selectedMedication != null) {
+        MedicationEntityDetailsDialog(
+            medication = selectedMedication!!,
+            onDismiss = { showDetailsDialog = false }
         )
     }
 }

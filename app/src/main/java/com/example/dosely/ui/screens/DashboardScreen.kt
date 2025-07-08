@@ -38,6 +38,12 @@ import com.example.dosely.data.AppDatabase
 import com.example.dosely.data.MedicationRepositoryImpl
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.remember
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.clickable
+import com.example.dosely.data.MedicationEntity
+import com.example.dosely.ui.screens.MedicationEntryDetailsDialog
+import com.example.dosely.ui.screens.MedicationEntry
 
 @Composable
 fun DashboardScreen() {
@@ -49,6 +55,9 @@ fun DashboardScreen() {
     val mediumBlue = Color(0xFFB0D3E2)
     val darkBlue = Color(0xFF2E7BB8)
     val accentBlue = Color(0xFF4A90E2)
+
+    val selectedMedication = remember { mutableStateOf<MedicationEntry?>(null) }
+    val showDetailsDialog = remember { mutableStateOf(false) }
 
     if (owner == null) {
         Box(
@@ -82,8 +91,8 @@ fun DashboardScreen() {
     )
 
     val medications by viewModel.medications.collectAsState()
-    val taken = viewModel.takenDoses
-    val total = viewModel.totalDoses
+    val taken by viewModel.takenDosesFlow.collectAsState()
+    val total by viewModel.totalDosesFlow.collectAsState()
     val progress = if (total > 0) taken / total.toFloat() else 0f
     val userName = "Alex"
     val today = LocalDate.now()
@@ -288,7 +297,12 @@ fun DashboardScreen() {
         // Medications List
         items(medications) { med ->
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        selectedMedication.value = med
+                        showDetailsDialog.value = true
+                    },
                 colors = CardDefaults.cardColors(
                     containerColor = Color.White
                 ),
@@ -330,13 +344,16 @@ fun DashboardScreen() {
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = darkBlue,
-                            maxLines = 1
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Text(
                             text = med.time,
                             style = MaterialTheme.typography.bodyMedium,
                             color = mediumBlue,
-                            fontSize = 13.sp
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
@@ -531,5 +548,12 @@ fun DashboardScreen() {
         item {
             Spacer(modifier = Modifier.height(20.dp))
         }
+    }
+
+    if (showDetailsDialog.value && selectedMedication.value != null) {
+        MedicationEntryDetailsDialog(
+            medication = selectedMedication.value!!,
+            onDismiss = { showDetailsDialog.value = false }
+        )
     }
 }
