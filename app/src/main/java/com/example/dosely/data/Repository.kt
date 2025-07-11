@@ -30,4 +30,22 @@ class MedicationRepositoryImpl(private val dao: MedicationDao, private val doseS
         doseStatusDao.insertDoseStatus(status)
     override fun getAllDoseStatusForDate(date: String): Flow<List<DoseStatusEntity>> =
         doseStatusDao.getAllDoseStatusForDate(date)
+}
+
+interface ReminderRepository {
+    fun getAllReminders(): Flow<List<ReminderEntity>>
+    fun getRemindersForMedication(medicationId: Int): Flow<List<ReminderEntity>>
+    suspend fun insertReminder(reminder: ReminderEntity): Long
+    suspend fun updateReminder(reminder: ReminderEntity)
+    suspend fun deleteReminder(reminder: ReminderEntity)
+    suspend fun deleteRemindersForMedication(medicationId: Int)
+}
+
+class ReminderRepositoryImpl(private val dao: ReminderDao) : ReminderRepository {
+    override fun getAllReminders(): Flow<List<ReminderEntity>> = dao.getAllReminders()
+    override fun getRemindersForMedication(medicationId: Int): Flow<List<ReminderEntity>> = dao.getRemindersForMedication(medicationId)
+    override suspend fun insertReminder(reminder: ReminderEntity): Long = dao.insertReminder(reminder)
+    override suspend fun updateReminder(reminder: ReminderEntity) = dao.updateReminder(reminder)
+    override suspend fun deleteReminder(reminder: ReminderEntity) = dao.deleteReminder(reminder)
+    override suspend fun deleteRemindersForMedication(medicationId: Int) = dao.deleteRemindersForMedication(medicationId)
 } 
