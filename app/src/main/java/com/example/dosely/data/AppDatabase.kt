@@ -1,26 +1,14 @@
 package com.example.dosely.data
 
-import androidx.room.Database
-import androidx.room.RoomDatabase
-import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
-import androidx.room.Query
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-import com.example.dosely.data.MedicationDao
-import com.example.dosely.data.MedicationEntity
-import com.example.dosely.data.DoseStatusEntity
-import com.example.dosely.data.DoseStatusDao
-import com.example.dosely.data.ReminderEntity
-import com.example.dosely.data.ReminderDao
-
 import android.content.Context
+import androidx.room.Database
 import androidx.room.Room
+import androidx.room.RoomDatabase
 
 @Database(
     entities = [MedicationEntity::class, DoseStatusEntity::class, ReminderEntity::class],
-    version = 1
+    version = 2, // ✅ Increase version to fix schema mismatch crash
+    exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun medicationDao(): MedicationDao
@@ -37,7 +25,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "dosely_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration() // ✅ Prevent crashing due to migration issues
+                    .build()
                 INSTANCE = instance
                 instance
             }
