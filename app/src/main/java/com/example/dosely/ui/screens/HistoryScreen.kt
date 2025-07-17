@@ -212,6 +212,7 @@ fun FilterSection(
                         )
                     )
                 },
+                enabled = true,
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = Color(0xFF4A90E2),
                     selectedLabelColor = Color.White,
@@ -221,8 +222,8 @@ fun FilterSection(
                 border = FilterChipDefaults.filterChipBorder(
                     selectedBorderColor = Color(0xFF4A90E2),
                     borderColor = Color(0xFFE0E0E0),
-                    enabled = false,
-                    selected = true
+                    enabled = true,
+                    selected = selectedFilter == filter
                 )
             )
         }

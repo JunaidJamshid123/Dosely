@@ -1,19 +1,17 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.dosely.ui.screens
 
-import android.app.AlarmManager
-import android.app.PendingIntent
-import android.content.Context
-import android.content.Intent
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,74 +23,364 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import java.util.Calendar
-
-// Reminder data model
-data class Reminder(
-    val id: Int,
-    val medicationName: String,
-    val time: String, // e.g., "08:00 AM"
-    val enabled: Boolean = true
-)
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.dosely.data.MedicationEntity
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.Add
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemindersScreen() {
     val context = LocalContext.current
-    var reminders by remember { mutableStateOf(listOf<Reminder>()) }
-    var nextId = 1
-    // appContext removed
+    val reminderFactory = remember { RemindersViewModelFactory(context) }
+    val remindersViewModel: RemindersViewModel = viewModel(factory = reminderFactory)
 
-    var showDialog by remember { mutableStateOf(false) }
-    var editReminder by remember { mutableStateOf<Reminder?>(null) }
-    val upcoming = reminders.filter { it.enabled }
-        .minByOrNull { LocalTime.parse(it.time, DateTimeFormatter.ofPattern("hh:mm a")) }
+    // Collect states from ViewModel
+    val medicationsWithReminders by remindersViewModel.medicationsWithReminders.collectAsState()
+    val medicationsWithoutReminders by remindersViewModel.medicationsWithoutReminders.collectAsState()
+
+    // Dialog states
+    var showEditReminderDialog by remember { mutableStateOf(false) }
+    var editMedication by remember { mutableStateOf<MedicationEntity?>(null) }
+    var showAddReminderDialog by remember { mutableStateOf(false) }
+    var selectedMedicationForAdd by remember { mutableStateOf<MedicationEntity?>(null) }
+
+    // Initialize reminders when screen loads
+    LaunchedEffect(Unit) {
+        remindersViewModel.initializeReminders()
+    }
+
+    // Get upcoming reminders (next 3 medications with times)
+    val upcomingReminders = remember(medicationsWithReminders) {
+        remindersViewModel.getUpcomingReminders()
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Reminders", fontWeight = FontWeight.Bold, fontSize = 22.sp) }
+                title = { Text("Medication Reminders", fontWeight = FontWeight.Bold, fontSize = 22.sp) },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = Color(0xFF2E7BB8),
+                    titleContentColor = Color.White
+                )
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Add Reminder")
+            if (medicationsWithoutReminders.isNotEmpty()) {
+                FloatingActionButton(
+                    onClick = {
+                        selectedMedicationForAdd = medicationsWithoutReminders.first()
+                        showAddReminderDialog = true
+                    },
+                    containerColor = Color(0xFF4A90E2),
+                    contentColor = Color.White
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Reminder")
+                }
             }
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color(0xFFDAF4FF))
                 .padding(padding)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Upcoming Reminder Card
-            if (upcoming != null) {
+            // Upcoming Reminders Section
+            item {
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF4A90E2)),
                     shape = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                 ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text("Next Reminder:", fontWeight = FontWeight.SemiBold, color = Color(0xFF2E7BB8))
-                        Text(
-                            "${upcoming.medicationName} at ${upcoming.time}",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Color(0xFF4A90E2)
-                        )
+                    Column(
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                Icons.Default.Schedule,
+                                contentDescription = "Upcoming",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Next Reminders",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = Color.White
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        if (upcomingReminders.isEmpty()) {
+                            Text(
+                                "No upcoming reminders",
+                                color = Color.White.copy(alpha = 0.8f),
+                                fontSize = 14.sp
+                            )
+                        } else {
+                            upcomingReminders.forEach { (medication, time) ->
+                                Card(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Medication,
+                                            contentDescription = "Medication",
+                                            tint = Color(0xFF4A90E2),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                medication.name,
+                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 14.sp,
+                                                color = Color(0xFF2E7BB8)
+                                            )
+                                            Text(
+                                                time,
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF666666)
+                                            )
+                                        }
+                                        Button(
+                                            onClick = {
+                                                remindersViewModel.markMedicationAsTaken(
+                                                    medication.id,
+                                                    time
+                                                )
+                                            },
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = Color(0xFF4CAF50)
+                                            ),
+                                            modifier = Modifier.size(width = 60.dp, height = 32.dp),
+                                            contentPadding = PaddingValues(4.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.CheckCircle,
+                                                contentDescription = "Mark as Taken",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
-            // List of Reminders
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(reminders) { reminder ->
+
+            // Medication Reminders Section
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Medication Reminders",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp,
+                        color = Color(0xFF2E7BB8)
+                    )
+
+                    Text(
+                        "${medicationsWithReminders.size} active",
+                        fontSize = 14.sp,
+                        color = Color(0xFF666666)
+                    )
+                }
+            }
+
+            // List of Medications with Reminders
+            if (medicationsWithReminders.isEmpty()) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(
+                                Icons.Default.NotificationsOff,
+                                contentDescription = "No Reminders",
+                                tint = Color(0xFFCCCCCC),
+                                modifier = Modifier.size(48.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                "No medication reminders yet",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                color = Color(0xFF666666)
+                            )
+                            Text(
+                                "Add medications with reminder times to see them here",
+                                fontSize = 14.sp,
+                                color = Color(0xFF999999),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            } else {
+                items(medicationsWithReminders) { medication ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(12.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            // Medication Header
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    Icons.Default.Medication,
+                                    contentDescription = "Medication",
+                                    tint = Color(0xFF4A90E2),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    medication.name,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    color = Color(0xFF2E7BB8)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Display all reminder times for this medication
+                            val times = medication.times.split(",").map { it.trim() }.filter { it.isNotBlank() }
+                            times.forEach { time ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Notifications,
+                                        contentDescription = "Reminder",
+                                        tint = Color(0xFF4A90E2),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Text(
+                                        time,
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF4A90E2),
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    IconButton(
+                                        onClick = {
+                                            editMedication = medication
+                                            showEditReminderDialog = true
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Edit",
+                                            tint = Color(0xFF4A90E2)
+                                        )
+                                    }
+
+                                    IconButton(
+                                        onClick = {
+                                            remindersViewModel.deleteMedicationReminderTime(medication, time)
+                                        }
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Delete,
+                                            contentDescription = "Delete",
+                                            tint = Color(0xFFE57373)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Add new time button
+                            Spacer(modifier = Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    selectedMedicationForAdd = medication
+                                    showAddReminderDialog = true
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFF4A90E2)
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    Color(0xFF4A90E2)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = "Add Time",
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Add Another Time")
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Medications without reminders section
+            if (medicationsWithoutReminders.isNotEmpty()) {
+                item {
+                    Text(
+                        "Medications without Reminders",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color(0xFF2E7BB8),
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                }
+
+                items(medicationsWithoutReminders) { medication ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -100,118 +388,347 @@ fun RemindersScreen() {
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Row(
-                            modifier = Modifier.padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(Modifier.weight(1f)) {
-                                Text(reminder.medicationName, fontWeight = FontWeight.Bold, color = Color(0xFF2E7BB8))
-                                Text(reminder.time, color = Color(0xFF4A90E2))
-                            }
-                            Switch(
-                                checked = reminder.enabled,
-                                onCheckedChange = { isChecked ->
-                                    reminders = reminders.map { if (it.id == reminder.id) it.copy(enabled = isChecked) else it }
-                                    reminders.find { it.id == reminder.id }?.let {
-                                        if (isChecked) scheduleAlarm(context, it) else cancelAlarm(context, it)
-                                    }
-                                }
+                            Icon(
+                                Icons.Default.Medication,
+                                contentDescription = "Medication",
+                                tint = Color(0xFF999999),
+                                modifier = Modifier.size(24.dp)
                             )
-                            IconButton(onClick = { editReminder = reminder; showDialog = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit")
-                            }
-                            IconButton(onClick = {
-                                reminders = reminders.filter { it.id != reminder.id }
-                                cancelAlarm(context, reminder)
-                            }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                medication.name,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 16.sp,
+                                color = Color(0xFF2E7BB8),
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            OutlinedButton(
+                                onClick = {
+                                    selectedMedicationForAdd = medication
+                                    showAddReminderDialog = true
+                                },
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFF4A90E2)
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    Color(0xFF4A90E2)
+                                )
+                            ) {
+                                Text("Add Reminder")
                             }
                         }
                     }
                 }
             }
         }
-        // Add/Edit Reminder Dialog
-        if (showDialog) {
-            ReminderDialog(
-                initial = editReminder,
-                onDismiss = { showDialog = false; editReminder = null },
-                onConfirm = { name, time ->
-                    if (editReminder == null) {
-                        val reminder = Reminder(nextId++, name, time, true)
-                        reminders = reminders + reminder
-                        scheduleAlarm(context, reminder)
-                    } else {
-                        reminders = reminders.map { if (it.id == editReminder!!.id) editReminder!!.copy(medicationName = name, time = time) else it }
-                        reminders.find { it.id == editReminder!!.id }?.let {
-                            if (it.enabled) scheduleAlarm(context, it) else cancelAlarm(context, it)
-                        }
-                    }
-                    showDialog = false; editReminder = null
+
+        // Edit Reminder Dialog
+        if (showEditReminderDialog && editMedication != null) {
+            EditMedicationReminderDialog(
+                medication = editMedication!!,
+                onDismiss = {
+                    showEditReminderDialog = false
+                    editMedication = null
+                },
+                onConfirm = { time ->
+                    remindersViewModel.updateMedicationTime(editMedication!!, time)
+                    showEditReminderDialog = false
+                    editMedication = null
+                }
+            )
+        }
+
+        // Add Reminder Dialog
+        if (showAddReminderDialog && selectedMedicationForAdd != null) {
+            AddMedicationReminderDialog(
+                medication = selectedMedicationForAdd!!,
+                onDismiss = {
+                    showAddReminderDialog = false
+                    selectedMedicationForAdd = null
+                },
+                onConfirm = { time ->
+                    remindersViewModel.addReminderTimeToMedication(selectedMedicationForAdd!!, time)
+                    showAddReminderDialog = false
+                    selectedMedicationForAdd = null
                 }
             )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReminderDialog(initial: Reminder?, onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
-    var name by remember { mutableStateOf(initial?.medicationName ?: "") }
-    var time by remember { mutableStateOf(initial?.time ?: "08:00 AM") }
+fun EditMedicationReminderDialog(
+    medication: MedicationEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = medication.times.let {
+            try {
+                val firstTime = it.split(",").first().trim()
+                LocalTime.parse(firstTime, DateTimeFormatter.ofPattern("hh:mm a")).hour
+            } catch (e: Exception) {
+                8
+            }
+        },
+        initialMinute = medication.times.let {
+            try {
+                val firstTime = it.split(",").first().trim()
+                LocalTime.parse(firstTime, DateTimeFormatter.ofPattern("hh:mm a")).minute
+            } catch (e: Exception) {
+                0
+            }
+        },
+        is24Hour = false
+    )
+
+    var time by remember {
+        mutableStateOf(
+            try {
+                medication.times.split(",").first().trim()
+            } catch (e: Exception) {
+                "08:00 AM"
+            }
+        )
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (initial == null) "Add Reminder" else "Edit Reminder") },
+        title = {
+            Text(
+                "Edit Reminder Time",
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF2E7BB8)
+            )
+        },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Medication Name") })
-                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time (e.g., 08:00 AM)") })
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "Medication: ${medication.name}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF2E7BB8)
+                )
+
+                // Time Selection
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = {},
+                    label = { Text("Reminder Time") },
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showTimePicker = true },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4A90E2),
+                        focusedLabelColor = Color(0xFF4A90E2)
+                    ),
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.AccessTime,
+                            contentDescription = "Time",
+                            tint = Color(0xFF4A90E2)
+                        )
+                    }
+                )
+
+                if (showTimePicker) {
+                    AlertDialog(
+                        onDismissRequest = { showTimePicker = false },
+                        title = {
+                            Text(
+                                "Select Time",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E7BB8)
+                            )
+                        },
+                        text = {
+                            TimePicker(
+                                state = timePickerState,
+                                colors = TimePickerDefaults.colors(
+                                    timeSelectorSelectedContainerColor = Color(0xFF4A90E2),
+                                    timeSelectorSelectedContentColor = Color.White
+                                )
+                            )
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    val picked = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                                    val formatted = picked.format(DateTimeFormatter.ofPattern("hh:mm a"))
+                                    time = formatted
+                                    showTimePicker = false
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF4A90E2)
+                                )
+                            ) {
+                                Text("Set Time")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showTimePicker = false }
+                            ) {
+                                Text("Cancel", color = Color(0xFF666666))
+                            }
+                        }
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(name, time) }) { Text("Save") }
+            Button(
+                onClick = {
+                    onConfirm(time)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4A90E2)
+                )
+            ) {
+                Text("Save")
+            }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Cancel", color = Color(0xFF666666))
+            }
         }
     )
 }
 
-private fun scheduleAlarm(context: Context, reminder: Reminder) {
-    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    val intent = Intent(context, ReminderReceiver::class.java).apply {
-        putExtra("medicationName", reminder.medicationName)
-        putExtra("time", reminder.time)
-        putExtra("notificationId", reminder.id)
-    }
-    val pendingIntent = PendingIntent.getBroadcast(
-        context,
-        reminder.id,
-        intent,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddMedicationReminderDialog(
+    medication: MedicationEntity,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var showTimePicker by remember { mutableStateOf(false) }
+
+    val timePickerState = rememberTimePickerState(
+        initialHour = 8,
+        initialMinute = 0,
+        is24Hour = false
     )
-    val cal = Calendar.getInstance().apply {
-        val formatter = DateTimeFormatter.ofPattern("hh:mm a")
-        val localTime = LocalTime.parse(reminder.time, formatter)
-        set(Calendar.HOUR_OF_DAY, localTime.hour)
-        set(Calendar.MINUTE, localTime.minute)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-        if (before(Calendar.getInstance())) add(Calendar.DATE, 1)
-    }
-    alarmManager.setExactAndAllowWhileIdle(
-        AlarmManager.RTC_WAKEUP,
-        cal.timeInMillis,
-        pendingIntent
+
+    var time by remember { mutableStateOf("08:00 AM") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "Add Reminder Time",
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF2E7BB8)
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    "Medication: ${medication.name}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF2E7BB8)
+                )
+
+                // Time Selection
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = {},
+                    label = { Text("Reminder Time") },
+                    readOnly = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showTimePicker = true },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF4A90E2),
+                        focusedLabelColor = Color(0xFF4A90E2)
+                    ),
+                    leadingIcon = {
+                        Icon(
+                            Icons.Default.AccessTime,
+                            contentDescription = "Time",
+                            tint = Color(0xFF4A90E2)
+                        )
+                    }
+                )
+
+                if (showTimePicker) {
+                    AlertDialog(
+                        onDismissRequest = { showTimePicker = false },
+                        title = {
+                            Text(
+                                "Select Time",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF2E7BB8)
+                            )
+                        },
+                        text = {
+                            TimePicker(
+                                state = timePickerState,
+                                colors = TimePickerDefaults.colors(
+                                    timeSelectorSelectedContainerColor = Color(0xFF4A90E2),
+                                    timeSelectorSelectedContentColor = Color.White
+                                )
+                            )
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    val picked = LocalTime.of(timePickerState.hour, timePickerState.minute)
+                                    val formatted = picked.format(DateTimeFormatter.ofPattern("hh:mm a"))
+                                    time = formatted
+                                    showTimePicker = false
+                                },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFF4A90E2)
+                                )
+                            ) {
+                                Text("Set Time")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showTimePicker = false }
+                            ) {
+                                Text("Cancel", color = Color(0xFF666666))
+                            }
+                        }
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(time)
+                },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color(0xFF4A90E2)
+                )
+            ) {
+                Text("Add Reminder")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text("Cancel", color = Color(0xFF666666))
+            }
+        }
     )
 }
-
-private fun cancelAlarm(context: Context, reminder: Reminder) {
-    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    val intent = Intent(context, ReminderReceiver::class.java)
-    val pendingIntent = PendingIntent.getBroadcast(
-        context,
-        reminder.id,
-        intent,
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    )
-    alarmManager.cancel(pendingIntent)
-} 

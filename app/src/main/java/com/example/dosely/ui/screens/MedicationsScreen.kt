@@ -98,14 +98,8 @@ fun MedicationsScreen() {
         return
     }
     
-    // Build Room database and repository
-    val db = remember {
-        Room.databaseBuilder(
-            context.applicationContext,
-            AppDatabase::class.java,
-            "dosely-db"
-        ).build()
-    }
+    // Use the singleton AppDatabase instance instead of creating a new one
+    val db = remember { AppDatabase.getInstance(context) }
     val repository = remember { MedicationRepositoryImpl(db.medicationDao(), db.doseStatusDao()) }
     val factory = remember { MedicationsViewModelFactory(repository) }
     val viewModel: MedicationsViewModel = viewModel(

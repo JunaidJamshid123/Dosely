@@ -1,6 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="true"
@@ -26,6 +32,44 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.Dosely" />
+
+
+        <receiver
+            android:name=".ui.screens.ReminderReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+                <data android:scheme="package" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Notification Action Receiver for handling notification actions -->
+        <receiver
+            android:name=".ui.screens.NotificationActionReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.dosely.ACTION_MARK_TAKEN" />
+                <action android:name="com.example.dosely.ACTION_SNOOZE" />
+                <action android:name="com.example.dosely.ACTION_DISMISS" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Boot Receiver to reschedule alarms after device restart -->
+        <receiver
+            android:name=".ui.screens.BootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter android:priority="1000">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>
